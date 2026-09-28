@@ -27,7 +27,7 @@ if [[ $MODE == "clipboard" ]]; then
 
   if [[ -n $mime ]]; then
     ext=${mime#image/}
-    [[ $ext == jpeg ]] && ext=jpg
+    [[ $ext == "jpeg" ]] && ext=jpg
     TEMP_FILE=$(mktemp --suffix=".$ext")
     wl-paste --type "$mime" >"$TEMP_FILE"
   else
@@ -37,7 +37,7 @@ if [[ $MODE == "clipboard" ]]; then
 
   if [[ ! -s $TEMP_FILE ]]; then
     rm -f "$TEMP_FILE"
-    omarchy-notification-send -g "" -u critical "Could not share" "Clipboard is empty"
+    omarchy-notification-send -g "" -u critical "Could not share" "Clipboard has no text or image"
     exit 1
   fi
 
