@@ -18,9 +18,11 @@ if [[ $1 == "--list-types" ]]; then
   exit 0
 fi
 
-if [[ $1 == "--type" && $2 == text ]]; then
+if [[ $1 == "--type" && $2 == "text" ]]; then
   [[ -n ${WL_PASTE_TEXT:-} ]] || exit 1
   printf '%s' "$WL_PASTE_TEXT"
+  # Like the real wl-paste, end text with a newline unless told not to.
+  [[ " $* " == *" --no-newline "* ]] || printf '\n'
   exit 0
 fi
 
@@ -50,7 +52,7 @@ run_share_clipboard() {
   shift 2
 
   status=0
-  HOME="$test_home" PATH="$mock_bin:$PATH" \
+  HOME="$test_home" PATH="$mock_bin:$PATH" TMPDIR="$test_tmp" \
     OMARCHY_TEST_SYSTEMD_RUN_LOG="$systemd_run_log" OMARCHY_TEST_NOTIFY_LOG="$notify_log" \
     "$@" bash "$ROOT/bin/omarchy-menu-share" clipboard || status=$?
 }
@@ -66,7 +68,7 @@ run_share_clipboard "$systemd_run_log" "$notify_log" \
 ((status == 0)) || fail "clipboard share exits 0 for an image clipboard"
 
 sent_path=$(grep -oE '/[^ ]+\.png' "$systemd_run_log") || fail "clipboard share sends a .png file for an image clipboard" "$(cat "$systemd_run_log")"
-[[ $(cat "$sent_path") == $'\x89PNGfakebytes' ]] || fail "clipboard share sends the actual image bytes, not an empty file"
+cmp -s "$sent_path" <(printf '%s' $'\x89PNGfakebytes') || fail "clipboard share sends the actual image bytes, not an empty file"
 pass "clipboard share sends the image when the clipboard holds image/png"
 
 # Plain text clipboard content keeps working as a .txt file.
@@ -78,7 +80,7 @@ run_share_clipboard "$systemd_run_log" "$notify_log" \
 
 ((status == 0)) || fail "clipboard share exits 0 for a text clipboard"
 sent_path=$(grep -oE '/[^ ]+\.txt' "$systemd_run_log") || fail "clipboard share sends a .txt file for a text clipboard" "$(cat "$systemd_run_log")"
-[[ $(cat "$sent_path") == "hello clipboard" ]] || fail "clipboard share sends the actual text content"
+cmp -s "$sent_path" <(printf '%s' "hello clipboard") || fail "clipboard share sends the actual text content"
 pass "clipboard share still sends text clipboard content as .txt"
 
 # An empty clipboard must not hand LocalSend a 0-byte file.
